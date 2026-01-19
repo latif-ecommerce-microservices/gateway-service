@@ -4,20 +4,22 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/latif-ecommerce-microservices/gateway-service/internal/transport/grpc/client"
 	"github.com/latif-ecommerce-microservices/gateway-service/pkg/httputil"
 	"github.com/latif-ecommerce-microservices/gateway-service/pkg/logging"
-
-	authpb "github.com/latif-ecommerce-microservices/user-service/pkg/pb/auth"
 )
 
 type AuthHandler struct {
-	grpcClient authpb.AuthServiceClient
+	authClient client.AuthClient
 	logger     *logging.Logger
 }
 
-func NewAuthHandler(grpcClient authpb.AuthServiceClient, logger *logging.Logger) *AuthHandler {
+func NewAuthHandler(
+	authClient client.AuthClient,
+	logger *logging.Logger,
+) *AuthHandler {
 	return &AuthHandler{
-		grpcClient: grpcClient,
+		authClient: authClient,
 		logger:     logger,
 	}
 }
@@ -34,19 +36,19 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	grpcRes, err := h.grpcClient.Login(r.Context(), &authpb.LoginRequest{
-		Email:    req.Email,
-		Password: req.Password,
-	})
-
+	res, err := h.authClient.Login(
+		r.Context(),
+		req.Email,
+		req.Password,
+	)
 	if err != nil {
 		httputil.HandleError(w, h.logger, err)
 		return
 	}
 
 	data := map[string]string{
-		"access_token":  grpcRes.AccessToken,
-		"refresh_token": grpcRes.RefreshToken,
+		"access_token":  res.AccessToken,
+		"refresh_token": res.RefreshToken,
 	}
 
 	httputil.WriteSuccessResponse(w, data, "Login successful")

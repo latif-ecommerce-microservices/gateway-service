@@ -1,60 +1,47 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
+	"github.com/go-chi/chi/v5"
+	"github.com/latif-ecommerce-microservices/gateway-service/internal/transport/http/handler"
+	"github.com/latif-ecommerce-microservices/gateway-service/internal/transport/http/router"
+	"log"
 
-	"github.com/latif-ecommerce-microservices/gateway-service/internal/app/server"
 	"github.com/latif-ecommerce-microservices/gateway-service/internal/config"
+	"github.com/latif-ecommerce-microservices/gateway-service/internal/transport/grpc"
+	"github.com/latif-ecommerce-microservices/gateway-service/internal/transport/grpc/client"
+	"github.com/latif-ecommerce-microservices/gateway-service/internal/transport/http"
 	"github.com/latif-ecommerce-microservices/gateway-service/pkg/logging"
 )
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	cfg, err := config.GetConfig()
 	if err != nil {
 		panic(err)
 	}
 
+	grpcConns, err := grpc.NewConnections(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer grpcConns.Close()
+
 	logger := logging.CreateDefaultLogger(cfg.GetLogLevel().String())
 
-	appServer := server.NewAppServer(cfg, logger)
+	authClient := client.NewAuthClient(grpcConns.User)
+	authHandler := handler.NewAuthHandler(authClient, logger)
 
-	if err := appServer.BeforeStart(ctx); err != nil {
-		logger.Fatal(fmt.Sprintf("Failed to init gateway: %s", err.Error()))
-	}
+	r := chi.NewRouter()
+	r.Route("/api/v1", func(r chi.Router) {
+		router.RegisterAuthRoutes(r, authHandler)
+	})
 
-	go func() {
-		logger.Info(fmt.Sprintf(
-			"[HTTP] API Gateway running on port %s...",
-			cfg.AppHTTPPort,
-		))
+	server := http.NewServer(cfg, r)
 
-		if err := appServer.HTTPServer().ListenAndServe(); err != nil &&
-			err != http.ErrServerClosed {
-			logger.Fatal(fmt.Sprintf("HTTP server error: %v", err))
-		}
-	}()
+	logger.Info(fmt.Sprintf(
+		"[HTTP] API Gateway running on port %s...",
+		cfg.AppHTTPPort,
+	))
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	logger.Info("Shutting down API Gateway...")
-
-	if err := appServer.HTTPServer().Shutdown(ctx); err != nil {
-		logger.Error(fmt.Sprintf("HTTP shutdown error: %v", err))
-	}
-
-	if err := appServer.AfterStart(ctx); err != nil {
-		logger.Error(fmt.Sprintf("Cleanup error: %v", err))
-	}
-
-	logger.Info("API Gateway stopped gracefully")
+	log.Fatal(server.Start())
 }

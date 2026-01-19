@@ -8,11 +8,12 @@ import (
 )
 
 type Config struct {
-	AppHTTPPort    string `env:"APP_HTTP_PORT"`
-	UserServiceURL string `env:"USER_SERVICE_URL"`
-	JWTSecret      string `env:"JWT_SECRET"`
-	LogLevel       string `env:"LOG_LEVEL"`
-	Redis          RedisConfig
+	AppHost      string `env:"APP_HOST"`
+	AppHTTPPort  string `env:"APP_HTTP_PORT"`
+	UserGRPCPort string `env:"USER_GRPC_PORT"`
+	JWTSecret    string `env:"JWT_SECRET"`
+	LogLevel     string `env:"LOG_LEVEL"`
+	Redis        RedisConfig
 }
 
 type RedisConfig struct {
