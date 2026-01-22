@@ -1,4 +1,4 @@
-package handler
+package auth
 
 import (
 	"encoding/json"
@@ -9,16 +9,16 @@ import (
 	"github.com/latif-ecommerce-microservices/gateway-service/pkg/logging"
 )
 
-type AuthHandler struct {
+type Handler struct {
 	authClient client.AuthClient
 	logger     *logging.Logger
 }
 
-func NewAuthHandler(
+func NewHandler(
 	authClient client.AuthClient,
 	logger *logging.Logger,
-) *AuthHandler {
-	return &AuthHandler{
+) *Handler {
+	return &Handler{
 		authClient: authClient,
 		logger:     logger,
 	}
@@ -29,7 +29,7 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteBadRequestResponse(w, "Invalid request body", nil)
