@@ -35,8 +35,6 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return []byte(jwtSecret), nil
 			})
 
-			fmt.Println("TOKEN:", tokenStr)
-
 			if err != nil || !token.Valid {
 				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
