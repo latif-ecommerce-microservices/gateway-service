@@ -12,6 +12,6 @@ func RegisterRoutes(
 ) {
 	r.Route("/users", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtSecret))
-		r.Get("/me", h.Me)
+		r.Get("/{id}", h.GetUserById)
 	})
 }

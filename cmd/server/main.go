@@ -30,9 +30,10 @@ func main() {
 	logger := logging.CreateDefaultLogger(cfg.GetLogLevel().String())
 
 	authClient := client.NewAuthClient(grpcConns.User)
+	userClient := client.NewUserClient(grpcConns.User)
 
 	authHandler := auth.NewHandler(authClient, logger)
-	userHandler := user.NewHandler()
+	userHandler := user.NewHandler(userClient, logger)
 
 	r := chi.NewRouter()
 
