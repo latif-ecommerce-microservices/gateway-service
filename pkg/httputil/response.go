@@ -3,6 +3,9 @@ package httputil
 import (
 	"encoding/json"
 	"fmt"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log/slog"
 	"math"
 	"net/http"
@@ -116,6 +119,29 @@ func WriteRawResponse(w http.ResponseWriter, message string, data any) {
 
 func HandleError(writer http.ResponseWriter, log *logging.Logger, err error) {
 	w := Writer(writer)
+
+	if st, ok := status.FromError(err); ok {
+		for _, d := range st.Details() {
+			if info, ok := d.(*errdetails.ErrorInfo); ok {
+				buildGRPCErrorResponse(
+					w,
+					grpcToHTTPStatus(st.Code()),
+					info.Reason,
+					st.Message(),
+				)
+				return
+			}
+		}
+
+		buildGRPCErrorResponse(
+			w,
+			grpcToHTTPStatus(st.Code()),
+			"unexpected_error",
+			st.Message(),
+		)
+		return
+	}
+
 	switch e := err.(type) {
 	case customerror.Error:
 		buildCustomErrorResponse(w, e, log)
@@ -203,4 +229,31 @@ func CredentialHeaderMissing(w http.ResponseWriter, logger *logging.Logger, whic
 	logger.Error("missing credential header", slog.String("missing_header", whichHeader))
 
 	return err
+}
+
+func grpcToHTTPStatus(code codes.Code) int {
+	switch code {
+	case codes.Unauthenticated:
+		return http.StatusUnauthorized
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.InvalidArgument:
+		return http.StatusBadRequest
+	case codes.PermissionDenied:
+		return http.StatusForbidden
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+func buildGRPCErrorResponse(
+	w ResponseWriter,
+	status int,
+	code string,
+	message string,
+) {
+	w.JSON(status, ErrorResponse{
+		Code:    code,
+		Message: message,
+	})
 }
