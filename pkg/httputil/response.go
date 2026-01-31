@@ -231,6 +231,14 @@ func CredentialHeaderMissing(w http.ResponseWriter, logger *logging.Logger, whic
 	return err
 }
 
+func WriteUnauthorizedResponse(w http.ResponseWriter, message string) {
+	writer := Writer(w)
+	writer.JSON(http.StatusUnauthorized, ErrorResponse{
+		Code:    string(customerror.ErrUnauthorized),
+		Message: message,
+	})
+}
+
 func grpcToHTTPStatus(code codes.Code) int {
 	switch code {
 	case codes.Unauthenticated:

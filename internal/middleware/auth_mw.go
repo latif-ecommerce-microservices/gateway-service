@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"github.com/latif-ecommerce-microservices/gateway-service/pkg/httputil"
 	"net/http"
 	"strings"
 
@@ -36,7 +37,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			})
 
 			if err != nil || !token.Valid {
-				http.Error(w, "invalid token", http.StatusUnauthorized)
+				httputil.WriteUnauthorizedResponse(w, "invalid token")
 				return
 			}
 
