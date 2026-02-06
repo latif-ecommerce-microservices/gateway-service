@@ -22,7 +22,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				httputil.WriteUnauthorizedResponse(w, "unauthorized")
 				return
 			}
 
@@ -43,7 +43,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 
 			userID, ok := claims["user_id"].(string)
 			if !ok {
-				http.Error(w, "user_id missing", http.StatusUnauthorized)
+				httputil.WriteUnauthorizedResponse(w, "user_id missing")
 				return
 			}
 
